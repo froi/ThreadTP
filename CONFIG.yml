@@ -1,0 +1,13 @@
+credentials:
+   user: 
+   password:
+server:
+   host:
+   port: 21
+config:
+   num_threads: 4
+   docs_repo:
+   file_types:
+      - .pdf
+      - .txt
+      - .xml
