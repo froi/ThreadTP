@@ -1,6 +1,6 @@
 #! venv/bin/python
 
-from ftplib import FTP
+import ftplib
 from glob import glob
 import yaml
 import logging
@@ -28,7 +28,7 @@ class Config():
     num_threads = 2
     file_types = ['.txt']
 
-    def loadConfig(self, config_file="CONFIG.yaml") :
+    def loadConfig(self, config_file="CONFIG.yml") :
         """ 
         Loads supplied configuration file. 
         If no path is passed then it will default to look for file in executing folder. 
@@ -49,7 +49,7 @@ class Config():
                     self.port = tmpConfig['server']['port']
                     self.user = tmpConfig['credentials']['user']
                     self.password = tmpConfig['credentials']['password']
-                    # self.docs_repo = tmpConfig['config']['docs_repo']
+                    self.docs_repo = tmpConfig['config']['docs_repo']
                     self.num_threads = tmpConfig['config']['num_threads']
                     self.file_types = tmpConfig['config']['file_types']
         except IOError as e:
@@ -57,44 +57,39 @@ class Config():
 
 def run():
     print 'entered run'
-    # docs = createDocList(config.file_types, config.docs_repo)
-    docs = createDocList(config.file_types)
-    if docs:
-        print 'Files to process: ', docs
-        processPool = Pool(processes=config.num_threads)
-        processPool.map(uploadFiles, docs)
-        print 'finished'
+    pool = Pool(processes=config.num_threads, initializer=threadTP_init)
+    
+    for path, error in pool.imap_unordered(uploadFiles, createDocList(config.docs_repo, config.file_types)):
+        if error:
+            print "File %s upload failed. Error: " % path, error
+    print "finished"
 
 def threadTP_init():
     global ftpSession
     try:
-        ftpSession = FTP(config.host,config.user,config.password)
+        ftpSession = ftplib.FTP(config.host,config.user,config.password)
     except:
         print 'FTP session creation failed.'
-        sys.exit()
 
 
-# def createDocList(fileTypes, docRepo):
-def createDocList(fileTypes):
+def createDocList(docRepo, fileTypes):
 
     print 'entered createDocList'
     tmpDocsList = []
     for fileType in fileTypes:
-        tmpDocsList += glob('*%s' % (fileType) )
+        tmpDocsList += glob('%s*%s' % (docRepo, fileType) )
 
     return tmpDocsList
 
 def uploadFiles(path):
     print 'entered uploadFiles', path
 
-    with open(path, 'rb') as tmpFile:
+    with open(path, 'r') as tmpFile:
         try:
-            ftpSession.storbinary('STOR %s' % tmpFile.name, tmpFile)
-        except ftplib.error_temp as error:
-            ftpSession.close()
+            ftpSession.storbinary('STOR %s' % tmpFile.name.split('/')[-1], tmpFile)
+        except Exception as error:
             return path, error
         else:
-            ftpSession.close()
             return path, None
 
 if __name__ == '__main__':
@@ -108,11 +103,5 @@ if __name__ == '__main__':
     print 'Password: %s' % config.password
     print 'File types: ', config.file_types
     print 'Number of threads: %d' % config.num_threads
-    
-    pool = Pool(processes=config.num_threads, initializer=threadTP_init)
-    
-    for path, error in pool.imap_unordered(uploadFiles, createDocList(config.file_types)):
-        if error is not None:
-            print "File %s upload failed."
     
     run()
