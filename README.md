@@ -27,5 +27,3 @@ Input argument to specify config file location is in the works.
 * Implement JSON parsing for the config class.
 * General beautify code.
 
-[![Bitdeli Badge](https://d2weczhvl823v0.cloudfront.net/froi/threadtp/trend.png)](https://bitdeli.com/free "Bitdeli Badge")
-
